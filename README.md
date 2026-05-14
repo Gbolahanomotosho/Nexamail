@@ -1,0 +1,1 @@
+NexaMail is a mobile-ready Progressive Web App that unifies your Gmail, Office 365, Yahoo, and AOL accounts into a single AI-powered inbox. Built with a multi-agent architecture using Claude Sonnet 4, it automatically summarizes emails, drafts replies, scores urgency, and keeps your inbox organized — so you spend less time managing email and more time acting on it.
