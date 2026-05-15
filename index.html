@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <meta name="theme-color" content="#0a0a0f"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="description" content="NexaMail — AI-first universal email client"/>
+  <title>NexaMail — AI Email Client</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c26;--surface3:#252533;
+      --border:rgba(255,255,255,0.07);--accent:#6c63ff;--accent2:#00e5b0;--accent3:#ff6b6b;
+      --text:#f0f0f8;--text2:#9090a8;--text3:#5a5a70;
+      --fd:'Syne',sans-serif;--fb:'DM Sans',sans-serif;
+      --r:14px;--rs:8px;--glow:0 0 24px rgba(108,99,255,0.3);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--fb);-webkit-font-smoothing:antialiased}
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:4px}
+
+    /* ── APP SHELL ── */
+    #app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+    #app-body{display:flex;flex:1;overflow:hidden;min-height:0}
+
+    /* ── STATUS BANNER ── */
+    #banner{background:linear-gradient(90deg,rgba(245,158,11,0.12),rgba(245,158,11,0.03));border-bottom:1px solid rgba(245,158,11,0.25);padding:7px 16px;display:flex;align-items:center;gap:10px;font-size:11.5px;color:#f59e0b;flex-shrink:0}
+    #banner strong{font-family:var(--fd);font-weight:700}
+    #banner a{color:#f59e0b;text-decoration:underline;cursor:pointer}
+    #banner .x{margin-left:auto;background:none;border:none;color:#f59e0b;cursor:pointer;font-size:15px;padding:0 2px;flex-shrink:0}
+
+    /* ── SIDEBAR ── */
+    #sidebar{
+      width:252px;min-width:252px;background:var(--surface);
+      border-right:1px solid var(--border);display:flex;flex-direction:column;
+      transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);z-index:100;overflow:hidden;
+    }
+    .sb-head{padding:16px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .logo{font-family:var(--fd);font-size:20px;font-weight:800;letter-spacing:-0.5px}
+    .logo span{color:var(--accent)}
+    .logo-sub{font-size:10px;color:var(--text3);margin-top:1px;letter-spacing:0.5px;text-transform:uppercase}
+    .sb-accounts{padding:9px 11px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .acct-pill{display:flex;align-items:center;gap:9px;padding:7px 10px;background:var(--surface2);border-radius:var(--rs);cursor:pointer;border:1px solid var(--border);transition:all 0.2s}
+    .acct-pill:hover{border-color:var(--accent)}
+    .acct-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--fd);flex-shrink:0}
+    .acct-info{flex:1;min-width:0}
+    .acct-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .acct-prov{font-size:10px;color:var(--text3)}
+    .acct-badge{font-size:10px;color:var(--accent2);font-weight:600;background:rgba(0,229,176,0.1);padding:2px 5px;border-radius:4px;flex-shrink:0}
+    .add-acct{display:flex;align-items:center;justify-content:center;gap:5px;padding:5px;margin-top:5px;border-radius:var(--rs);cursor:pointer;font-size:11px;color:var(--accent);border:1px dashed rgba(108,99,255,0.3);transition:all 0.2s}
+    .add-acct:hover{background:rgba(108,99,255,0.08);border-color:var(--accent)}
+
+    /* FIX: sidebar nav is scrollable */
+    .sb-nav{flex:1;overflow-y:auto;padding:6px 9px}
+    .nav-sec-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;padding:8px 8px 4px;font-family:var(--fd);font-weight:600}
+    .nav-item{display:flex;align-items:center;gap:8px;padding:8px 8px;border-radius:var(--rs);cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.15s;position:relative;user-select:none}
+    .nav-item:hover{background:var(--surface2);color:var(--text)}
+    .nav-item.active{background:rgba(108,99,255,0.15);color:var(--accent);font-weight:500}
+    .nav-item .ni{width:16px;text-align:center;font-size:14px;flex-shrink:0}
+    .nav-item .nb{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;font-family:var(--fd)}
+    .nav-item .nb.red{background:var(--accent3)}
+
+    .sb-bottom{padding:8px 9px 10px;border-top:1px solid var(--border);flex-shrink:0}
+    .ai-bar{display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(0,229,176,0.07);border:1px solid rgba(0,229,176,0.18);border-radius:var(--rs);margin-bottom:7px}
+    .pulse{width:7px;height:7px;border-radius:50%;background:var(--accent2);animation:pulse 2s infinite;flex-shrink:0}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+    .ai-bar-txt{font-size:11px;color:var(--accent2);font-weight:500}
+    .compose-btn{width:100%;padding:10px;background:var(--accent);border:none;border-radius:var(--r);color:#fff;font-size:13px;font-weight:700;font-family:var(--fd);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:var(--glow);transition:all 0.2s}
+    .compose-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(108,99,255,0.5)}
+
+    /* ── MAIN PANEL ── */
+    #main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+    #topbar{padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+    .menu-btn{display:none;background:none;border:none;color:var(--text2);font-size:19px;cursor:pointer;padding:2px}
+    .search-wrap{flex:1;position:relative}
+    .search-inp{width:100%;padding:8px 12px 8px 34px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-size:13px;font-family:var(--fb);outline:none;transition:all 0.2s}
+    .search-inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,99,255,0.12)}
+    .search-inp::placeholder{color:var(--text3)}
+    .search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
+    .tb-actions{display:flex;gap:5px}
+    .ib{width:33px;height:33px;border-radius:var(--rs);background:var(--surface2);border:1px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all 0.15s;flex-shrink:0}
+    .ib:hover{border-color:var(--accent);color:var(--accent);background:rgba(108,99,255,0.1)}
+
+    /* ── EMAIL LIST ── */
+    #list-panel{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-height:0}
+    .list-hdr{padding:12px 14px 6px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .list-title{font-family:var(--fd);font-size:17px;font-weight:700;letter-spacing:-0.3px}
+    .list-cnt{font-size:11px;color:var(--text3)}
+    .digest{margin:0 12px 8px;padding:9px 12px;background:linear-gradient(135deg,rgba(108,99,255,0.1),rgba(0,229,176,0.04));border:1px solid rgba(108,99,255,0.2);border-radius:var(--r);cursor:pointer;transition:all 0.2s;flex-shrink:0}
+    .digest:hover{border-color:var(--accent)}
+    .digest-label{font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;font-family:var(--fd);margin-bottom:2px}
+    .digest-txt{font-size:12px;color:var(--text2);line-height:1.5}
+    .digest-txt strong{color:var(--text)}
+    .email-item{padding:10px 14px;display:flex;gap:10px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.12s;position:relative;flex-shrink:0}
+    .email-item:hover{background:var(--surface2)}
+    .email-item.active{background:rgba(108,99,255,0.08);border-left:3px solid var(--accent);padding-left:11px}
+    .email-item.unread .e-subj{font-weight:600;color:var(--text)}
+    .email-item.unread::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent);position:absolute;left:5px;top:18px}
+    .e-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:var(--fd);flex-shrink:0}
+    .e-content{flex:1;min-width:0}
+    .e-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:1px}
+    .e-from{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+    .e-time{font-size:11px;color:var(--text3);flex-shrink:0}
+    .e-subj{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px}
+    .e-prev{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .e-tags{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap}
+    .tag{font-size:10px;padding:1px 5px;border-radius:3px;font-weight:600;font-family:var(--fd)}
+    .tag.p{background:rgba(255,107,107,0.15);color:var(--accent3)}
+    .tag.l{background:rgba(108,99,255,0.12);color:var(--accent)}
+    .tag.a{background:rgba(0,229,176,0.1);color:var(--accent2)}
+    .e-star{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px;transition:color 0.15s;flex-shrink:0;align-self:center}
+    .e-star:hover{color:var(--accent)}
+    .e-star.on{color:#f59e0b}
+    .ph-high{border-left:3px solid var(--accent3)!important}
+    .ph-med{border-left:3px solid #f59e0b!important}
+
+    /* ── EMAIL VIEW ── */
+    #ev{width:400px;min-width:400px;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+    .ev-hdr{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;flex-shrink:0}
+    .back-btn{background:none;border:none;color:var(--text2);cursor:pointer;font-size:17px;display:none;padding:2px}
+    .ev-acts{display:flex;gap:5px;margin-left:auto}
+    /* FIX: email body scrolls independently */
+    .ev-body{flex:1;overflow-y:auto;padding:14px;min-height:0}
+    .ev-subj{font-family:var(--fd);font-size:17px;font-weight:700;line-height:1.3;margin-bottom:11px}
+    .ev-from-row{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+    .ev-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:var(--fd);flex-shrink:0}
+    .ev-sender-name{font-weight:500;font-size:13px}
+    .ev-sender-email{font-size:11px;color:var(--text3)}
+    .ev-time{margin-left:auto;font-size:11px;color:var(--text3)}
+    .ai-sum-panel{background:linear-gradient(135deg,rgba(108,99,255,0.08),rgba(0,229,176,0.03));border:1px solid rgba(108,99,255,0.2);border-radius:var(--r);padding:11px;margin-bottom:13px}
+    .ai-sum-hdr{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+    .ai-sum-title{font-family:var(--fd);font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.8px}
+    .ai-sum-body{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px}
+    .ai-chips{display:flex;gap:5px;flex-wrap:wrap}
+    .chip{padding:4px 10px;background:var(--surface3);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--text2);cursor:pointer;transition:all 0.15s;font-weight:500}
+    .chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(108,99,255,0.1)}
+    .dots-wrap{display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px}
+    .dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin:0 1px;animation:db 1.2s infinite}
+    .dots span:nth-child(2){animation-delay:.2s}
+    .dots span:nth-child(3){animation-delay:.4s}
+    @keyframes db{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
+    .ev-body-text{font-size:13px;color:var(--text2);line-height:1.8}
+
+    /* FIX: reply box fixed at bottom, does NOT push content off screen */
+    .reply-box{border-top:1px solid var(--border);padding:10px 11px;background:var(--surface);flex-shrink:0}
+    .reply-tabs{display:flex;gap:2px;margin-bottom:6px}
+    .rtab{padding:5px 11px;border-radius:var(--rs);font-size:12px;font-weight:600;font-family:var(--fd);cursor:pointer;color:var(--text3);border:none;background:none;transition:all 0.15s}
+    .rtab.active{background:rgba(108,99,255,0.15);color:var(--accent)}
+    .reply-ta{width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--fb);font-size:13px;resize:none;outline:none;min-height:68px;max-height:160px;transition:border-color 0.2s;line-height:1.6}
+    .reply-ta:focus{border-color:var(--accent)}
+    .reply-foot{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+    .reply-tools{display:flex;gap:4px}
+    .rt-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px;border-radius:4px;transition:all 0.15s}
+    .rt-btn:hover{color:var(--accent);background:rgba(108,99,255,0.1)}
+    .send-btn{padding:7px 14px;background:var(--accent);border:none;border-radius:var(--rs);color:#fff;font-size:13px;font-weight:700;font-family:var(--fd);cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:5px}
+    .send-btn:hover{transform:translateY(-1px);box-shadow:var(--glow)}
+    .send-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+
+    /* ── COMPOSE MODAL ── */
+    #compose-modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.65);backdrop-filter:blur(8px);align-items:flex-end;justify-content:center;padding:0}
+    #compose-modal.open{display:flex}
+    /* FIX: compose card is fully scrollable and has proper height */
+    .compose-card{
+      width:100%;max-width:620px;background:var(--surface);
+      border:1px solid var(--border);border-top:2px solid var(--accent);
+      border-radius:var(--r) var(--r) 0 0;
+      display:flex;flex-direction:column;
+      height:92vh;max-height:92vh;
+      animation:slideUp 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    @keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+    .compose-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .compose-title{font-family:var(--fd);font-size:15px;font-weight:700}
+    .compose-close{background:none;border:none;color:var(--text2);font-size:19px;cursor:pointer;padding:2px}
+    .compose-close:hover{color:var(--text)}
+    /* FIX: compose fields area scrolls */
+    .compose-fields{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+    .c-inp{width:100%;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--fb);font-size:13px;outline:none;transition:border-color 0.2s}
+    .c-inp:focus{border-color:var(--accent)}
+    .c-inp::placeholder{color:var(--text3)}
+    .ai-draft-bar{display:flex;align-items:center;gap:7px;padding:8px 11px;background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.2);border-radius:var(--rs);font-size:12px;color:var(--accent2);cursor:pointer;transition:all 0.15s}
+    .ai-draft-bar:hover{background:rgba(108,99,255,0.13)}
+    /* FIX: compose body textarea grows to fill space */
+    .c-body{flex:1;min-height:180px;resize:none;width:100%;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--fb);font-size:13px;outline:none;transition:border-color 0.2s;line-height:1.6}
+    .c-body:focus{border-color:var(--accent)}
+    .c-body::placeholder{color:var(--text3)}
+    .compose-foot{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);flex-shrink:0}
+
+    /* ── AI ASSISTANT PANEL ── */
+    #ai-overlay{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,0.5);backdrop-filter:blur(5px)}
+    #ai-overlay.open{display:block}
+    #ai-drawer{position:fixed;right:0;top:0;bottom:0;width:340px;max-width:92vw;background:var(--surface);border-left:1px solid var(--border);z-index:160;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1)}
+    #ai-drawer.open{transform:translateX(0)}
+    .ai-drw-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+    .ai-drw-title{font-family:var(--fd);font-size:14px;font-weight:700;flex:1}
+    .ai-model-tag{font-size:10px;background:rgba(0,229,176,0.1);color:var(--accent2);padding:2px 8px;border-radius:10px;font-weight:600;font-family:var(--fd)}
+    .ai-drw-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:17px}
+    /* FIX: ai messages scroll correctly */
+    .ai-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0}
+    .ai-msg{padding:9px 12px;border-radius:var(--rs);font-size:13px;line-height:1.6;max-width:92%}
+    .ai-msg.bot{background:rgba(108,99,255,0.1);border:1px solid rgba(108,99,255,0.15);color:var(--text2);align-self:flex-start}
+    .ai-msg.usr{background:var(--accent);color:#fff;align-self:flex-end}
+    .ai-inp-row{padding:10px;border-top:1px solid var(--border);display:flex;gap:7px;flex-shrink:0}
+    .ai-txt{flex:1;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--fb);font-size:13px;outline:none;transition:border-color 0.2s}
+    .ai-txt:focus{border-color:var(--accent)}
+    .ai-go{width:34px;height:34px;background:var(--accent);border:none;border-radius:var(--rs);color:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s}
+    .ai-go:hover{box-shadow:var(--glow)}
+
+    /* ── ADD ACCOUNT MODAL ── */
+    #add-modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:16px}
+    #add-modal.open{display:flex}
+    .add-card{width:100%;max-width:430px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;animation:pop 0.2s ease;max-height:90vh;overflow-y:auto}
+    @keyframes pop{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
+    .add-title{font-family:var(--fd);font-size:18px;font-weight:800;margin-bottom:3px}
+    .add-sub{font-size:12px;color:var(--text3);margin-bottom:8px}
+    .oauth-note{font-size:12px;color:#f59e0b;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);border-radius:var(--rs);padding:9px 11px;margin-bottom:13px;line-height:1.5}
+    .prov-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:13px}
+    .prov-btn{padding:12px;background:var(--surface2);border:2px solid var(--border);border-radius:var(--r);cursor:pointer;text-align:center;transition:all 0.2s;color:var(--text)}
+    .prov-btn:hover{border-color:var(--accent);background:rgba(108,99,255,0.08)}
+    .prov-btn.sel{border-color:var(--accent);background:rgba(108,99,255,0.12)}
+    .prov-ico{font-size:22px;margin-bottom:3px}
+    .prov-name{font-size:12px;font-weight:600;font-family:var(--fd)}
+    .prov-st{font-size:10px;color:#f59e0b;margin-top:1px}
+    .div-line{display:flex;align-items:center;gap:8px;margin:2px 0 11px;color:var(--text3);font-size:11px}
+    .div-line::before,.div-line::after{content:'';flex:1;height:1px;background:var(--border)}
+    .m-inp{width:100%;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--fb);font-size:13px;outline:none;margin-bottom:7px;transition:border-color 0.2s}
+    .m-inp:focus{border-color:var(--accent)}
+    .m-actions{display:flex;gap:8px;margin-top:2px}
+    .m-cancel{flex:1;padding:9px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text2);cursor:pointer;font-family:var(--fb);font-size:13px}
+    .m-confirm{flex:2;padding:9px;background:var(--accent);border:none;border-radius:var(--rs);color:#fff;cursor:pointer;font-family:var(--fd);font-size:13px;font-weight:700;transition:all 0.2s}
+    .m-confirm:hover{box-shadow:var(--glow)}
+
+    /* ── GROQ SETUP MODAL ── */
+    #groq-modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.88);backdrop-filter:blur(12px);align-items:center;justify-content:center;padding:16px}
+    #groq-modal.open{display:flex}
+    .gm-card{width:100%;max-width:450px;background:var(--surface);border:1px solid rgba(108,99,255,0.3);border-radius:var(--r);padding:24px;animation:pop 0.2s ease}
+    .gm-title{font-family:var(--fd);font-size:20px;font-weight:800;margin-bottom:3px}
+    .gm-sub{font-size:13px;color:var(--text3);margin-bottom:16px;line-height:1.5}
+    .gm-steps{margin-bottom:16px}
+    .gm-step{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
+    .sn{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+    .st{font-size:13px;color:var(--text2);line-height:1.5}
+    .st a{color:var(--accent2);text-decoration:underline}
+    .gm-label{font-size:11px;color:var(--text3);margin-bottom:5px;font-family:var(--fd);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+    .gm-inp{width:100%;padding:10px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--fb);font-size:13px;outline:none;margin-bottom:11px;transition:border-color 0.2s}
+    .gm-inp:focus{border-color:var(--accent)}
+    .gm-skip{text-align:center;font-size:12px;color:var(--text3);margin-top:8px;cursor:pointer}
+    .gm-skip:hover{color:var(--text2)}
+
+    /* ── TOAST ── */
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--surface3);border:1px solid var(--border);border-radius:var(--rs);padding:9px 16px;font-size:13px;color:var(--text);z-index:999;transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);white-space:nowrap;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
+    #toast.show{transform:translateX(-50%) translateY(0)}
+
+    /* ── EMPTY STATE ── */
+    .empty{text-align:center;padding:48px 20px;color:var(--text3)}
+    .empty-ico{font-size:38px;margin-bottom:9px;opacity:0.4}
+    .empty-txt{font-size:14px;font-family:var(--fd);font-weight:600}
+
+    /* ── OVERLAY ── */
+    #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:90}
+
+    /* ── MOBILE ── */
+    @media(max-width:900px){
+      #sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%)}
+      #sidebar.open{transform:translateX(0)}
+      #overlay.open{display:block}
+      .menu-btn{display:flex}
+      #ev{display:none}
+      #ev.open{display:flex;position:fixed;inset:0;z-index:80;width:100%;min-width:unset;border-radius:0}
+      #ev .back-btn{display:flex}
+      .compose-card{max-width:100%;border-radius:var(--r) var(--r) 0 0}
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- STATUS BANNER -->
+  <div id="banner">
+    <span>⚠️</span>
+    <span><strong>Assessment Build — OAuth Flagged:</strong> Gmail / Office 365 / IMAP OAuth flows are fully architected (see CLAUDE.md + ARCHITECTURE.md) but require a backend server to activate. All UI and AI features are fully live. <a onclick="openAddModal()">View OAuth plan →</a></span>
+    <button class="x" onclick="this.closest('#banner').style.display='none'">✕</button>
+  </div>
+
+  <div id="app-body">
+
+    <!-- ── SIDEBAR ── -->
+    <aside id="sidebar">
+      <div class="sb-head">
+        <div class="logo">Nexa<span>Mail</span></div>
+        <div class="logo-sub">AI-First Email Client</div>
+      </div>
+
+      <div class="sb-accounts">
+        <div class="acct-pill" onclick="openAddModal()">
+          <div class="acct-av" style="background:linear-gradient(135deg,#6c63ff,#a78bfa)">O</div>
+          <div class="acct-info">
+            <div class="acct-name">Omotosho</div>
+            <div class="acct-prov">Demo · Assessment Build</div>
+          </div>
+          <div class="acct-badge">6</div>
+        </div>
+        <div class="add-acct" onclick="openAddModal()">+ Connect Real Account</div>
+      </div>
+
+      <!-- FIX: nav section is scrollable -->
+      <div class="sb-nav">
+        <div class="nav-sec-label">Mail</div>
+        <div class="nav-item active" onclick="setView('inbox',this)"><span class="ni">📥</span>Inbox<span class="nb">6</span></div>
+        <div class="nav-item" onclick="setView('starred',this)"><span class="ni">⭐</span>Starred</div>
+        <div class="nav-item" onclick="setView('sent',this)"><span class="ni">📤</span>Sent</div>
+        <div class="nav-item" onclick="setView('drafts',this)"><span class="ni">📝</span>Drafts<span class="nb">2</span></div>
+        <div class="nav-item" onclick="setView('archive',this)"><span class="ni">📦</span>Archive</div>
+        <div class="nav-item" onclick="setView('spam',this)"><span class="ni">🚫</span>Spam<span class="nb red">3</span></div>
+        <div class="nav-item" onclick="setView('trash',this)"><span class="ni">🗑️</span>Trash</div>
+        <div class="nav-sec-label" style="margin-top:4px">Labels</div>
+        <div class="nav-item" onclick="setView('work',this)"><span class="ni">💼</span>Work</div>
+        <div class="nav-item" onclick="setView('personal',this)"><span class="ni">🏠</span>Personal</div>
+        <div class="nav-item" onclick="setView('finance',this)"><span class="ni">💰</span>Finance</div>
+      </div>
+
+      <div class="sb-bottom">
+        <div class="ai-bar">
+          <div class="pulse"></div>
+          <div class="ai-bar-txt" id="ai-status-txt">AI Active — Groq / Llama 3</div>
+        </div>
+        <button class="compose-btn" onclick="openCompose()">✏️ Compose</button>
+      </div>
+    </aside>
+
+    <!-- ── MAIN ── -->
+    <div id="main">
+      <div id="topbar">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <div class="search-wrap">
+          <span class="search-ico">🔍</span>
+          <input class="search-inp" type="text" placeholder="Search emails, senders, subjects…" oninput="searchEmails(this.value)"/>
+        </div>
+        <div class="tb-actions">
+          <button class="ib" title="AI Assistant" onclick="toggleAI()">🤖</button>
+          <button class="ib" title="AI Setup" onclick="openGroqModal()">⚡</button>
+          <button class="ib" title="Refresh" onclick="refresh()">🔄</button>
+        </div>
+      </div>
+
+      <div id="list-panel">
+        <div class="list-hdr">
+          <div class="list-title" id="list-title">Inbox</div>
+          <div class="list-cnt" id="list-cnt">6 messages</div>
+        </div>
+        <div class="digest" onclick="toggleAI()">
+          <div class="digest-label">⚡ AI Digest</div>
+          <div class="digest-txt">You have <strong>2 urgent items</strong>: Taj wants a resubmit with OAuth flagged. Stripe invoice <strong>$49.00</strong> due May 31. <strong>3 emails</strong> safe to archive.</div>
+        </div>
+        <div id="email-list"></div>
+      </div>
+    </div>
+
+    <!-- ── EMAIL VIEW ── -->
+    <div id="ev">
+      <div class="ev-hdr">
+        <button class="back-btn" onclick="closeEV()">←</button>
+        <div class="ev-acts">
+          <button class="ib" id="star-btn" onclick="toggleStar()">☆</button>
+          <button class="ib" onclick="archiveEmail()">📦</button>
+          <button class="ib" onclick="deleteEmail()">🗑️</button>
+          <button class="ib">🏷️</button>
+          <button class="ib">⋯</button>
+        </div>
+      </div>
+      <div class="ev-body" id="ev-body">
+        <div class="empty"><div class="empty-ico">📭</div><div class="empty-txt">Select an email to read</div></div>
+      </div>
+      <div class="reply-box" id="reply-box" style="display:none">
+        <div class="reply-tabs">
+          <button class="rtab active" onclick="setRTab('reply',this)">Reply</button>
+          <button class="rtab" onclick="setRTab('forward',this)">Forward</button>
+          <button class="rtab" onclick="setRTab('ai',this)">✨ AI Draft</button>
+        </div>
+        <textarea class="reply-ta" id="reply-ta" placeholder="Write your reply…"></textarea>
+        <div class="reply-foot">
+          <div class="reply-tools">
+            <button class="rt-btn">📎</button>
+            <button class="rt-btn">😊</button>
+            <button class="rt-btn">T</button>
+          </div>
+          <button class="send-btn" id="send-btn" onclick="sendReply()">Send ➤</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end app-body -->
+</div><!-- end app -->
+
+<!-- OVERLAY -->
+<div id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ── COMPOSE MODAL ── -->
+<div id="compose-modal">
+  <div class="compose-card">
+    <div class="compose-hdr">
+      <div class="compose-title">✏️ New Message</div>
+      <button class="compose-close" onclick="closeCompose()">✕</button>
+    </div>
+    <!-- FIX: all compose fields in scrollable container -->
+    <div class="compose-fields">
+      <input class="c-inp" type="email" placeholder="To: recipient@email.com" id="c-to"/>
+      <input class="c-inp" type="text" placeholder="Subject" id="c-subj"/>
+      <div class="ai-draft-bar" onclick="aiDraftCompose()">✨ Let AI write this — describe what you want to say…</div>
+      <textarea class="c-body" placeholder="Write your message here…" id="c-body"></textarea>
+    </div>
+    <div class="compose-foot">
+      <div class="reply-tools">
+        <button class="rt-btn">📎</button>
+        <button class="rt-btn">😊</button>
+        <button class="rt-btn">T</button>
+      </div>
+      <button class="send-btn" id="compose-send-btn" onclick="sendCompose()">Send ➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── AI ASSISTANT DRAWER ── -->
+<div id="ai-overlay" onclick="closeAI()"></div>
+<div id="ai-drawer">
+  <div class="ai-drw-hdr">
+    <div class="pulse" style="width:8px;height:8px"></div>
+    <div class="ai-drw-title">NexaMail AI</div>
+    <div class="ai-model-tag" id="ai-model-tag">Groq / Llama 3 ✓</div>
+    <button class="ai-drw-close" onclick="closeAI()">✕</button>
+  </div>
+  <div class="ai-msgs" id="ai-msgs">
+    <div class="ai-msg bot">👋 Hi Omotosho! I'm your NexaMail AI assistant powered by Groq Llama 3. I'm ready to help — AI is active and secured via server proxy.</div>
+    <div class="ai-msg bot">💡 I can summarize emails, draft replies, prioritize your inbox, and answer anything. What do you need?</div>
+  </div>
+  <div class="ai-inp-row">
+    <input class="ai-txt" id="ai-inp" type="text" placeholder="Ask AI about your emails…" onkeydown="if(event.key==='Enter')sendAI()"/>
+    <button class="ai-go" onclick="sendAI()">➤</button>
+  </div>
+</div>
+
+<!-- ── ADD ACCOUNT MODAL ── -->
+<div id="add-modal">
+  <div class="add-card">
+    <div class="add-title">Connect Email Account</div>
+    <div class="add-sub">Gmail, Office 365, Yahoo, AOL, or custom IMAP</div>
+    <div class="oauth-note">
+      ⚠️ <strong>OAuth Status (flagged per Taj's guidance):</strong> Full OAuth 2.0 for Gmail (Google API) and Office 365 (Microsoft Graph) are designed and documented. IMAP/SMTP connectors for Yahoo and AOL are also architected. A Node.js backend server + registered app credentials are required to activate — confirmed next implementation step.
+    </div>
+    <div class="prov-grid">
+      <div class="prov-btn" onclick="selProv('gmail',this)"><div class="prov-ico">📧</div><div class="prov-name">Gmail</div><div class="prov-st">OAuth 2.0 — Architected</div></div>
+      <div class="prov-btn" onclick="selProv('o365',this)"><div class="prov-ico">📬</div><div class="prov-name">Office 365</div><div class="prov-st">OAuth 2.0 — Architected</div></div>
+      <div class="prov-btn" onclick="selProv('yahoo',this)"><div class="prov-ico">💌</div><div class="prov-name">Yahoo Mail</div><div class="prov-st">IMAP — Architected</div></div>
+      <div class="prov-btn" onclick="selProv('imap',this)"><div class="prov-ico">🔧</div><div class="prov-name">IMAP / AOL</div><div class="prov-st">IMAP — Architected</div></div>
+    </div>
+    <div class="div-line">or demo with test credentials</div>
+    <input class="m-inp" type="email" placeholder="Email address" id="add-email"/>
+    <input class="m-inp" type="password" placeholder="App Password / OAuth Token" id="add-pass"/>
+    <div class="m-actions">
+      <button class="m-cancel" onclick="closeAddModal()">Cancel</button>
+      <button class="m-confirm" onclick="addAccount()">Add Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── GROQ SETUP MODAL ── -->
+<div id="groq-modal">
+  <div class="gm-card">
+    <div class="gm-title">⚡ AI is Secured via Server</div>
+    <div class="gm-sub">Your Groq API key is stored in Vercel environment variables — it is never sent to the browser. Add it once in Vercel settings and AI works for everyone securely.</div>
+    <div class="gm-steps">
+      <div class="gm-step"><div class="sn">1</div><div class="st">Go to <a href="https://console.groq.com" target="_blank">console.groq.com</a> → sign up free, no card needed</div></div>
+      <div class="gm-step"><div class="sn">2</div><div class="st">Click <strong>API Keys</strong> → <strong>Create API Key</strong> → copy it (starts with <strong>gsk_</strong>)</div></div>
+      <div class="gm-step"><div class="sn">3</div><div class="st">Go to your <strong>Vercel Dashboard</strong> → your project → <strong>Settings</strong> → <strong>Environment Variables</strong></div></div>
+      <div class="gm-step"><div class="sn">4</div><div class="st">Add: Name = <strong>GROQ_API_KEY</strong> · Value = your key · Click Save → Redeploy</div></div>
+    </div>
+    <button class="m-confirm" style="width:100%;padding:11px" onclick="closeGroqModal()">✅ Got It</button>
+    <div class="gm-skip" onclick="closeGroqModal()">Close</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ── STATE ──
+let curEmail = null, curView = 'inbox';
+let starred = new Set([3]);
+let selProvider = 'gmail';
+const aiHistory = [];
+
+// ── EMAIL DATA ──
+const EMAILS = [
+  { id:1, from:'Taj Haslani', email:'taj@aptask.com',
+    subject:'Re: NexaMail — UI Review Feedback',
+    preview:'UI is genuinely well done, nice work. One blocker: no OAuth flow to connect Gmail, Office 365, or IMAP...',
+    time:'15:08', unread:true, label:'Work', priority:'high', avatar:'T', color:'#6c63ff',
+    body:`Hi Hammed,\n\nUI is genuinely well done, nice work there. One blocker though: there's no OAuth flow to connect Gmail, Office 365, or IMAP — the app has no way to add a mailbox. Without account connection the rest of the features (unified inbox, AI summaries, prioritization) can't actually be evaluated against real data.\n\nIf you want to wire up OAuth and resubmit, send the updated link.\n\nBest,\nTaj Haslani\ntaj@aptask.com`,
+    suggested:['Draft resubmit reply','View OAuth plan','Archive after read'] },
+  { id:2, from:'Taj Haslani', email:'taj@aptask.com',
+    subject:'Re: Assignment Update',
+    preview:'Thanks for the update. Send final deliverables once OAuth is wired up, or flag clearly and send what you have...',
+    time:'14:58', unread:true, label:'Work', priority:'high', avatar:'T', color:'#6c63ff',
+    body:`Hi Hammed,\n\nThanks for the update. Send the final deliverables once OAuth is wired up and we'll review. If it stays at the architected-but-not-connected stage, send what you have and flag it clearly.\n\nBest,\nTaj Haslani`,
+    suggested:['Draft final reply','Archive'] },
+  { id:3, from:'Vercel', email:'noreply@vercel.com',
+    subject:'Deployment succeeded — nexamail.vercel.app',
+    preview:'Your project NexaMail deployed to production. Build time: 8s. 0 errors.',
+    time:'Yesterday', unread:false, label:'Work', priority:null, avatar:'▲', color:'#ffffff',
+    body:'Your deployment to nexamail.vercel.app was successful. Build time: 8s. 0 errors. Your app is live and ready.',
+    suggested:['Visit site','Share URL','Archive'] },
+  { id:4, from:'Stripe', email:'billing@stripe.com',
+    subject:'Invoice #INV-2026-0047 — $49.00 due May 31',
+    preview:'Your monthly subscription invoice is ready. Payment due May 31, 2026.',
+    time:'Yesterday', unread:true, label:'Finance', priority:'high', avatar:'S', color:'#635bff',
+    body:'Invoice #INV-2026-0047 for $49.00 is due on May 31, 2026. This covers your NexaMail Pro subscription.',
+    suggested:['Pay now','Set reminder','Download PDF'] },
+  { id:5, from:'GitHub', email:'noreply@github.com',
+    subject:'PR merged: feat/ai-summarizer #142',
+    preview:'Your pull request merged into main. All 47 CI checks passed. Great work!',
+    time:'2 days ago', unread:false, label:'Work', priority:null, avatar:'G', color:'#238636',
+    body:'Your pull request #142 feat/ai-summarizer was successfully merged into main. All 47 CI checks passed.',
+    suggested:['Archive','View PR'] },
+  { id:6, from:'LinkedIn', email:'messages@linkedin.com',
+    subject:'5 new connection requests waiting',
+    preview:'5 people want to connect with you. Review and respond at your convenience.',
+    time:'3 days ago', unread:false, label:'Personal', priority:null, avatar:'in', color:'#0a66c2',
+    body:'You have 5 new connection requests waiting on LinkedIn.',
+    suggested:['View requests','Archive'] },
+];
+
+// ── SECURE AI CALL — calls /api/ai (serverless proxy), key never in browser ──
+async function callAI(system, userMsg, maxTokens = 500) {
+  try {
+    const res = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system,
+        messages: [{ role: 'user', content: userMsg }],
+        maxTokens
+      })
+    });
+    const data = await res.json();
+    if (data.error) return null;
+    return data.reply || null;
+  } catch(e) { return null; }
+}
+
+// AI chat uses full conversation history
+async function callAIChat(messages) {
+  try {
+    const res = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, maxTokens: 600 })
+    });
+    const data = await res.json();
+    if (data.error) return `Error: ${data.error}`;
+    return data.reply || 'No response.';
+  } catch(e) { return 'Connection error. Please try again.'; }
+}
+
+// ── RENDER LIST ──
+function renderList(emails) {
+  const el = document.getElementById('email-list');
+  if (!emails.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">📭</div><div class="empty-txt">No messages here</div></div>';
+    return;
+  }
+  el.innerHTML = emails.map(e => `
+    <div class="email-item ${e.unread?'unread':''} ${e.priority==='high'?'ph-high':e.priority==='med'?'ph-med':''}"
+         id="item-${e.id}" onclick="openEmail(${e.id})">
+      <div class="e-av" style="background:${e.color}20;color:${e.color}">${e.avatar}</div>
+      <div class="e-content">
+        <div class="e-meta"><div class="e-from">${e.from}</div><div class="e-time">${e.time}</div></div>
+        <div class="e-subj">${e.subject}</div>
+        <div class="e-prev">${e.preview}</div>
+        <div class="e-tags">
+          ${e.priority==='high'?'<span class="tag p">⚡ Urgent</span>':''}
+          ${e.label?`<span class="tag l">${e.label}</span>`:''}
+          <span class="tag a">✨ AI</span>
+        </div>
+      </div>
+      <button class="e-star ${starred.has(e.id)?'on':''}"
+        onclick="event.stopPropagation();toggleStarItem(${e.id},this)">
+        ${starred.has(e.id)?'★':'☆'}
+      </button>
+    </div>`
+  ).join('');
+}
+
+function getViewEmails(v) {
+  return ({
+    inbox:EMAILS, starred:EMAILS.filter(e=>starred.has(e.id)),
+    sent:[], drafts:[], archive:[], spam:[], trash:[],
+    work:EMAILS.filter(e=>e.label==='Work'),
+    personal:EMAILS.filter(e=>e.label==='Personal'),
+    finance:EMAILS.filter(e=>e.label==='Finance'),
+  })[v] || EMAILS;
+}
+
+function setView(view, el) {
+  curView = view;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  const emails = getViewEmails(view);
+  document.getElementById('list-title').textContent = el.textContent.replace(/\d+/g,'').trim();
+  document.getElementById('list-cnt').textContent = emails.length + ' messages';
+  renderList(emails);
+  closeSidebar();
+}
+
+function searchEmails(q) {
+  if (!q) { renderList(getViewEmails(curView)); return; }
+  const f = EMAILS.filter(e =>
+    e.from.toLowerCase().includes(q.toLowerCase()) ||
+    e.subject.toLowerCase().includes(q.toLowerCase()) ||
+    e.preview.toLowerCase().includes(q.toLowerCase())
+  );
+  renderList(f);
+  document.getElementById('list-cnt').textContent = f.length + ' results';
+}
+
+// ── OPEN EMAIL ──
+async function openEmail(id) {
+  const e = EMAILS.find(x=>x.id===id); if (!e) return;
+  curEmail = e; e.unread = false;
+  document.querySelectorAll('.email-item').forEach(el=>el.classList.remove('active'));
+  const item = document.getElementById('item-'+id);
+  if (item) { item.classList.add('active'); item.classList.remove('unread'); }
+  const isStarred = starred.has(e.id);
+  document.getElementById('star-btn').textContent = isStarred ? '★' : '☆';
+  document.getElementById('star-btn').style.color = isStarred ? '#f59e0b' : '';
+
+  document.getElementById('ev-body').innerHTML = `
+    <div class="ev-subj">${e.subject}</div>
+    <div class="ev-from-row">
+      <div class="ev-av" style="background:${e.color}20;color:${e.color}">${e.avatar}</div>
+      <div><div class="ev-sender-name">${e.from}</div><div class="ev-sender-email">${e.email}</div></div>
+      <div class="ev-time">${e.time}</div>
+    </div>
+    <div class="ai-sum-panel" id="ai-sum-panel">
+      <div class="ai-sum-hdr"><div class="pulse"></div><div class="ai-sum-title">AI Summary</div></div>
+      <div class="ai-sum-body" id="ai-sum-body">
+        <div class="dots-wrap"><span>Analyzing with AI</span><div class="dots"><span></span><span></span><span></span></div></div>
+      </div>
+      <div class="ai-chips" id="ai-chips"></div>
+    </div>
+    <div class="ev-body-text">${e.body.replace(/\n/g,'<br/>')}</div>
+  `;
+  document.getElementById('reply-box').style.display = 'block';
+  document.getElementById('reply-ta').value = '';
+  document.getElementById('ev').classList.add('open');
+
+  // Live AI summary via secure proxy
+  const sumEl = document.getElementById('ai-sum-body');
+  const chipsEl = document.getElementById('ai-chips');
+  const summary = await callAI(
+    'You are NexaMail AI. Summarize this email in 2 sentences. State clearly what action the user should take. Be direct and professional.',
+    `From: ${e.from}\nSubject: ${e.subject}\n\n${e.body}`, 200
+  );
+  sumEl.textContent = summary || e.subject + ' — click AI Assistant for a full analysis.';
+  chipsEl.innerHTML = e.suggested.map(s =>
+    `<div class="chip" onclick="chipAct('${s}',${e.id})">${s}</div>`
+  ).join('');
+}
+
+function closeEV() { document.getElementById('ev').classList.remove('open'); curEmail = null; }
+function toggleStar() {
+  if (!curEmail) return;
+  const id = curEmail.id;
+  if (starred.has(id)) { starred.delete(id); document.getElementById('star-btn').textContent='☆'; document.getElementById('star-btn').style.color=''; }
+  else { starred.add(id); document.getElementById('star-btn').textContent='★'; document.getElementById('star-btn').style.color='#f59e0b'; }
+  showToast('⭐ Updated');
+}
+function toggleStarItem(id, btn) {
+  if (starred.has(id)) { starred.delete(id); btn.textContent='☆'; btn.classList.remove('on'); }
+  else { starred.add(id); btn.textContent='★'; btn.classList.add('on'); }
+}
+function archiveEmail() { if (!curEmail) return; showToast('📦 Archived'); closeEV(); }
+function deleteEmail() { if (!curEmail) return; showToast('🗑️ Deleted'); closeEV(); }
+
+// ── REPLY ──
+function setRTab(tab, el) {
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if (tab === 'ai') aiDraftReply();
+}
+
+async function aiDraftReply() {
+  if (!curEmail) return;
+  const ta = document.getElementById('reply-ta');
+  const btn = document.getElementById('send-btn');
+  ta.value = '✨ Drafting with AI…'; ta.disabled = true; btn.disabled = true;
+  const draft = await callAI(
+    'You are a professional email assistant. Write a concise, professional reply. Sign off "Best regards,\nOmotosho". Output reply body only — no subject line.',
+    `From: ${curEmail.from}\nSubject: ${curEmail.subject}\n\n${curEmail.body}`, 400
+  );
+  ta.value = draft || `Hi ${curEmail.from.split(' ')[0]},\n\nThank you for your message. I will review and get back to you shortly.\n\nBest regards,\nOmotosho`;
+  ta.disabled = false; btn.disabled = false;
+  showToast('✨ AI draft ready!');
+}
+
+function sendReply() {
+  const txt = document.getElementById('reply-ta').value.trim();
+  if (!txt) { showToast('⚠️ Reply is empty'); return; }
+  showToast('✉️ Reply sent!');
+  document.getElementById('reply-ta').value = '';
+}
+
+async function chipAct(action, emailId) {
+  const e = EMAILS.find(x=>x.id===emailId); if (!e) return;
+  if (action.toLowerCase().includes('draft') || action.toLowerCase().includes('reply')) {
+    const aiTab = document.querySelector('.rtab:last-child');
+    setRTab('ai', aiTab);
+  } else if (action.toLowerCase().includes('archive')) {
+    archiveEmail();
+  } else {
+    toggleAI();
+    document.getElementById('ai-inp').value = `${action} regarding: "${e.subject}"`;
+    await sendAI();
+  }
+}
+
+// ── COMPOSE ──
+function openCompose() { document.getElementById('compose-modal').classList.add('open'); }
+function closeCompose() { document.getElementById('compose-modal').classList.remove('open'); }
+
+async function aiDraftCompose() {
+  const subj = document.getElementById('c-subj').value;
+  const body = document.getElementById('c-body');
+  const btn = document.getElementById('compose-send-btn');
+  body.value = '✨ Writing with AI…'; body.disabled = true; btn.disabled = true;
+  const draft = await callAI(
+    'You are a professional email writer. Write a professional email body. Sign off "Best regards,\nOmotosho". Output body only.',
+    subj ? `Subject: ${subj}` : 'Write a professional general email.', 400
+  );
+  body.value = draft || 'Hi,\n\nI hope this message finds you well. I wanted to reach out regarding the above. Please let me know how you would like to proceed.\n\nBest regards,\nOmotosho';
+  body.disabled = false; btn.disabled = false;
+  showToast('✨ AI draft ready!');
+}
+
+function sendCompose() {
+  const to = document.getElementById('c-to').value.trim();
+  if (!to) { showToast('⚠️ Add a recipient'); return; }
+  showToast('✉️ Message sent!');
+  closeCompose();
+  document.getElementById('c-to').value = '';
+  document.getElementById('c-subj').value = '';
+  document.getElementById('c-body').value = '';
+}
+
+// ── AI ASSISTANT ──
+function toggleAI() {
+  const d = document.getElementById('ai-drawer');
+  if (d.classList.contains('open')) { closeAI(); return; }
+  d.classList.add('open');
+  document.getElementById('ai-overlay').classList.add('open');
+}
+function closeAI() {
+  document.getElementById('ai-drawer').classList.remove('open');
+  document.getElementById('ai-overlay').classList.remove('open');
+}
+
+async function sendAI() {
+  const inp = document.getElementById('ai-inp');
+  const msg = inp.value.trim(); if (!msg) return;
+  const msgs = document.getElementById('ai-msgs');
+  msgs.innerHTML += `<div class="ai-msg usr">${msg}</div>`;
+  inp.value = '';
+  const tid = 'ty'+Date.now();
+  msgs.innerHTML += `<div class="ai-msg bot" id="${tid}"><div class="dots"><span></span><span></span><span></span></div></div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Add system message first call only
+  if (aiHistory.length === 0) {
+    aiHistory.push({ role:'system', content:'You are NexaMail AI, a smart email assistant. Help users manage emails, draft replies, summarize threads, and prioritize inbox. Be concise and professional. Max 4 sentences unless drafting.' });
+  }
+  aiHistory.push({ role:'user', content:msg });
+
+  const reply = await callAIChat(aiHistory);
+  aiHistory.push({ role:'assistant', content:reply });
+
+  document.getElementById(tid)?.remove();
+  msgs.innerHTML += `<div class="ai-msg bot">${reply.replace(/\n/g,'<br/>')}</div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ── MODALS ──
+function openAddModal() { document.getElementById('add-modal').classList.add('open'); }
+function closeAddModal() { document.getElementById('add-modal').classList.remove('open'); }
+function selProv(p, el) {
+  selProvider = p;
+  document.querySelectorAll('.prov-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function addAccount() {
+  const email = document.getElementById('add-email').value.trim();
+  if (!email) { showToast('⚠️ Enter email address'); return; }
+  showToast(`✅ ${email} added (OAuth backend required to activate)`);
+  closeAddModal();
+}
+function openGroqModal() { document.getElementById('groq-modal').classList.add('open'); }
+function closeGroqModal() { document.getElementById('groq-modal').classList.remove('open'); }
+
+// ── SIDEBAR ──
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+// ── REFRESH ──
+function refresh() { showToast('🔄 Inbox refreshed'); renderList(getViewEmails(curView)); }
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ── INIT ──
+renderList(EMAILS);
+if (window.innerWidth > 900) openEmail(1);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+</script>
+</body>
+</html>
